@@ -1,0 +1,8 @@
+IMG_7487_smaller.jpg   Help me segment the right person and the left cat in this image     min size = 700
+IMG_7487_smaller.jpg Help me segment the person in red and the left cat in this image      min size = 700
+coco_cat_person.jpg  Help me segment the person and the left cat in this image
+ADE_val_00000297.jpg Help me segment the left person in this image
+ball.jpg Help me segment the black ball in this image
+cats-and-dogs.jpg help me segment the pets in this image
+cats-and-dogs.jpg help me segment the cat and dog in this image
+outfits.jpg help me segment the person in blue 
