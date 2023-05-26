@@ -56,7 +56,7 @@ Note: for demo, if you want to use random inputs, you can ignore data loading an
 #### 👉Jupyter Notebook
 Download the model for demo and put it under folder `checkpoints` as `checkpoints/demo_e200.ckpt`. 
 
-Then run '''lseg_demo_nltk.ipynb''' in your Jupyter Notebook
+Then run `lseg_demo_nltk.ipynb` in your Jupyter Notebook
 
 
 
