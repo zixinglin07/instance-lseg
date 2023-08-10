@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from pprint import pprint
-
+import csv
 # IoU function
 def computeIoU(box1, box2):
     # each box is of [x1, y1, w, h]
@@ -580,7 +580,7 @@ import clip
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
-
+counter = 0
 for ref_id in ref_ids:
     ref = refer.loadRefs(ref_id)[0]
     image_id = refer.getImgIds(ref_id)[0]
@@ -602,7 +602,7 @@ for ref_id in ref_ids:
     
     
     #load image
-    crop_size = 480
+    #crop_size = 480
     padding = [0.0] * 3
     image = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
     #plt.imshow(image)
@@ -685,10 +685,10 @@ for ref_id in ref_ids:
         #return that one box
         best_bbox = 0
     else:
-        crop_size = 480
+        #crop_size = 480
         padding = [0.0] * 3
         img_copy_clip = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
-        print(type(img_copy_clip))
+        #print(type(img_copy_clip))
         img_copy_clip = np.array(img_copy_clip)
         #transform = transforms.Compose(
         #    [
@@ -725,7 +725,7 @@ for ref_id in ref_ids:
             best_id = -1
             ret_index_temp = []
             ret_index_cls = []
-            print("number of cropped: "+ str(len(cropped_imgs[0])))
+            #print("number of cropped: "+ str(len(cropped_imgs[0])))
             for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
                 #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
                 image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
@@ -738,18 +738,18 @@ for ref_id in ref_ids:
                     logits_per_image, logits_per_text = model(image, text)
                     probs = logits_per_image.softmax(dim=-1).cpu().numpy()
 
-                print("Box "+str(j)+": "+str(probs[0][0]))
+                #print("Box "+str(j)+": "+str(probs[0][0]))
                 #if score is higher than max, max = score and append to list. if score within 0.1 of max score, append as well
                 if probs[0][0]>max_score:
                     max_score = probs[0][0]
                     best_id = j
             vote_arr[best_id]+=1
         
-        print(vote_arr)
+        #print(vote_arr)
         best_bbox = vote_arr.index(max(vote_arr))
         
     plt.imshow(cropped_imgs[0][best_bbox])    
-    print(new_bbox[0][best_bbox])
+    #print(new_bbox[0][best_bbox])
                 #probs[0][0]
     #print('pass to clip:')
     #for sentence in ref['sentences']:
@@ -759,18 +759,32 @@ for ref_id in ref_ids:
     #draw results from clip
     from PIL import Image, ImageDraw
     img_copy_test2 = img.copy()
-    print("clip retval: " + str(best_bbox))
+    #print("clip retval: " + str(best_bbox))
     #print((processed_new_bbox[i][j]))
     topLeft = (new_bbox[0][best_bbox][0],new_bbox[0][best_bbox][1])
     bottomRight = (new_bbox[0][best_bbox][2],new_bbox[0][best_bbox][3])
     img2 = ImageDraw.Draw(img_copy_test2)
     #rect_color = getHexColor(rgba_cols[i])
     draw_rectangle(img2, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=8)
+    new_bbox_xywh = [topLeft[0], topLeft[1], bottomRight[0]-topLeft[0], bottomRight[1]-topLeft[1]]
+    ref_bbox = refer.refToAnn[ref_id]['bbox']
+    IoU = computeIoU(ref_bbox, new_bbox_xywh)
+    print("IoU:"+str(IoU))
     #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
-    plt.axis('off')
-    plt.imshow(img_copy_test2)
-    plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
+    #plt.axis('off')
+    #plt.imshow(img_copy_test2)
+    #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
     #**TODO** IOU, remember to check for size difference
-    plt.figure()
-    refer.showRef(ref, seg_box='box')
-    plt.show()
+    #plt.figure()
+    #refer.showRef(ref, seg_box='box')
+    #plt.show()
+
+
+    # open the file in the write mode
+    with open('iou_log.csv',  mode='a', newline='') as f:
+        # create the csv writer
+        writer = csv.writer(f)
+
+        # write a row to the csv file
+        writer.writerow([counter,refer.loadImgs(image_id)[0]['file_name'],IoU])
+        counter+=1
