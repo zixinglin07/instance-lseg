@@ -581,7 +581,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 counter = 0
+checkpoint = 23 # enter last index in iou log
 for ref_id in ref_ids:
+    if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
+        counter+=1
+        continue
     ref = refer.loadRefs(ref_id)[0]
     image_id = refer.getImgIds(ref_id)[0]
     if len(ref['sentences']) < 2:
@@ -678,7 +682,6 @@ for ref_id in ref_ids:
     plt.axis('off')
     plt.imshow(img_copy_test)
     
-    #*******TODO****
     #if only 1 bounding box, just return that one
     best_bbox = -1
     if len(new_bbox[0])==1:
@@ -748,7 +751,7 @@ for ref_id in ref_ids:
         #print(vote_arr)
         best_bbox = vote_arr.index(max(vote_arr))
         
-    plt.imshow(cropped_imgs[0][best_bbox])    
+    #plt.imshow(cropped_imgs[0][best_bbox])    
     #print(new_bbox[0][best_bbox])
                 #probs[0][0]
     #print('pass to clip:')
@@ -786,5 +789,5 @@ for ref_id in ref_ids:
         writer = csv.writer(f)
 
         # write a row to the csv file
-        writer.writerow([counter,refer.loadImgs(image_id)[0]['file_name'],IoU])
+        writer.writerow([counter-2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
         counter+=1
