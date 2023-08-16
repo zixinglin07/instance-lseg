@@ -636,7 +636,7 @@ model, preprocess = clip.load("ViT-B/32", device=device)
 counter = 0
 checkpoint = 0 # enter last index in iou log
 for ref_id in ref_ids:
-    #if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
+    #if counter<=(checkpoint): #somehow need to add +2 to checkpoint to resume
     #    counter+=1
     #    continue
     ref = refer.loadRefs(ref_id)[0]
@@ -657,265 +657,244 @@ for ref_id in ref_ids:
         labels.append(label)
     #labels.append("others")
     
-    #try:
-    #load image
-    #crop_size = 480
-    padding = [0.0] * 3
-    image = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
-    #plt.imshow(image)
-    image = np.array(image)
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-        ]
-    )
-    image = transform(image).unsqueeze(0)
-    img = image[0].permute(1,2,0)
-    img = img * 0.5 + 0.5
-    #plt.imshow(img)
-    
-    
-    with torch.no_grad():
-        outputs = evaluator.parallel_forward(image, labels) #evaluator.forward(image, labels) #parallel_forward
-        #outputs = model(image,labels)
-        predicts = [
-            torch.max(output, 1)[1].cpu().numpy() 
-            for output in outputs
-        ]
-    #Lseg results    
-    predict = predicts[0]
-
-    new_palette = get_new_pallete(len(labels))
-    mask, patches = get_new_mask_pallete(predict, new_palette, out_label_flag=True, labels=labels)
-    img = image[0].permute(1,2,0)
-    img = img * 0.5 + 0.5
-    img = Image.fromarray(np.uint8(255*img)).convert("RGBA")
-    seg = mask.convert("RGBA")
-    out = Image.blend(img, seg, alpha)
-    #plt.axis('off')
-    #plt.imshow(img)
-    #plt.figure()
-    #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
-    #plt.axis('off')
-    #plt.imshow(seg)
-    
-    #get bbox
-    rgba_cols = palette_to_rgba(new_palette)
-    bboxes, segmaps = process_segmap(rgba_cols,seg)
-    
-    #Show results of bounding boxes
-    from PIL import Image, ImageDraw
-    img_copy = img.copy()
-    #for i in range(0,len(bboxes)-1):
-    #    topLeft = (bboxes[i][0],bboxes[i][1])
-    #    bottomRight = (bboxes[i][2],bboxes[i][3])
-    #    img1 = ImageDraw.Draw(img_copy)
-    #    rect_color = getHexColor(rgba_cols[i])
-    #    draw_rectangle(img1, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=5)
-    #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
-    #plt.axis('off')
-    #plt.imshow(img_copy)
-    
-    w,h = img.size
-    min_size = w*h*0.005 #arbitary min size, 0.005 for the cat human image
-    new_bbox = bbox_instancing(bboxes,segmaps,min_size=min_size) 
-    
-    #sample bbox instancing result
-    img_copy_test = img.copy()
-    for i in range(len(new_bbox)-1):
-        for j in range(len(new_bbox[i])):
-            topLeft = (new_bbox[i][j][0],new_bbox[i][j][1])
-            bottomRight = (new_bbox[i][j][2],new_bbox[i][j][3])
-            img1 = ImageDraw.Draw(img_copy_test)
-            #rect_color = getHexColor(rgba_cols[i])
-            draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=5)
-            #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
-    #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
-    plt.axis('off')
-    plt.imshow(img_copy_test)
-    img_copy_clip = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
-    img_copy_clip = np.array(img_copy_clip)
-    cropped_imgs = []
-    for class_bbox in new_bbox:
-        cropped_imgs.append([])
-        for bbox in class_bbox:
-            cropped_imgs[len(cropped_imgs)-1].append(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]])
-
-
-
-    for cls in cropped_imgs:
-        for i in range(len(cls)):
-            #img_transform = transform(cls[i]).unsqueeze(0)
-            #print(cls[i])
-            cls[i]=Image.fromarray(cls[i])
+    try:
+        #load image
+        #crop_size = 480
+        padding = [0.0] * 3
+        image = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
+        #plt.imshow(image)
+        image = np.array(image)
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
+            ]
+        )
+        image = transform(image).unsqueeze(0)
+        img = image[0].permute(1,2,0)
+        img = img * 0.5 + 0.5
+        #plt.imshow(img)
         
-    
-    vote_arr = [0]*len(new_bbox[0])
-
-    for sentence in ref['sentences']:          
-        max_score = 0
-        best_id = -1
-        ret_index_temp = []
-        ret_index_cls = []
-        #print("number of cropped: "+ str(len(cropped_imgs[0])))
-        for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
-            #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
-            image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
-            #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
-            text = clip.tokenize([sentence['sent'], "other"]).to(device)  #extracted input is also based on class
-            with torch.no_grad():
-                image_features = model.encode_image(image)
-                text_features = model.encode_text(text)
-
-                logits_per_image, logits_per_text = model(image, text)
-                probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-
-            #print("Box "+str(j)+": "+str(probs[0][0]))
-            #if score is higher than max, max = score and append to list. if score within 0.1 of max score, append as well
-            if probs[0][0]>max_score:
-                max_score = probs[0][0]
-                best_id = j
-        vote_arr[best_id]+=1
-    
-    #print(vote_arr)
-    best_bbox = vote_arr.index(max(vote_arr)) #narrow down 1 box in the instance first, then use region proposal within that box
-    
-    
-    
-    #####REGION PROPOSAL########
-    prop_rects = ssearch(img_path+refer.loadImgs(image_id)[0]['file_name'], new_bbox[0][best_bbox], min_size) #uninstanced bboxes, use the best box and perform region proposal
-    img_copy_test = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
-    #print(prop_rects)
-    count = 0
-    #for rect in prop_rects:
-        #print((processed_new_bbox[i][j]))
-        #topLeft = (rect[0],rect[1])
-        #bottomRight = (rect[2],rect[3])
-        #img1 = ImageDraw.Draw(img_copy_test)
-        #rect_color = getHexColor(rgba_cols[i])
-        #draw_rectangle(img1, (topLeft,bottomRight),color = tuple(rgba_cols[0]), width=1)
-        #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
-        #count+=1
-        #if count>1000:
-        #    break
-    #plt.axis('off')
-    #plt.imshow(img_copy_test)
-    #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
-    #print("Input: "+user_input)
-    #bboxes
-    #if only 1 bounding box, just return that one
-    best_bbox = -1
-    #if len(new_bbox[0])==1:
-        #return that one box
-    #    best_bbox = 0
-    #else:
-    #crop_size = 480
-    padding = [0.0] * 3
-    img_copy_clip = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
-    #print(type(img_copy_clip))
-    img_copy_clip = np.array(img_copy_clip)
-    #transform = transforms.Compose(
-    #    [
-    #        transforms.ToTensor(),
-    #        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
-    #    ]
-    #)
-    #image = transform(image).unsqueeze(0)
-    #img = image[0].permute(1,2,0)
-    #img = img * 0.5 + 0.5
-    #plt.imshow(img)
-
-
-
-    cropped_imgs = [[]]
-    #for class_bbox in new_bbox:
-    #    cropped_imgs.append([])
-        #for bbox in class_bbox:
-        #    cropped_imgs[len(cropped_imgs)-1].append(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]])
-
-    for bbox in prop_rects:
-        #print(bbox)
-        cropped_imgs[0].append(Image.fromarray(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]]))
         
-    
-    vote_arr = []
-    
-    best_id = -1
-    
-    
-    ####CLIP#######
-    for sentence in ref['sentences']:          
-        max_score = 0
-        ret_index_temp = []
-        ret_index_cls = []
-        #print("number of cropped: "+ str(len(cropped_imgs[0])))
-        for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
-            print(j)
-            #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
-            image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
-            #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
-            text = clip.tokenize([sentence['sent'], "other"]).to(device)  #extracted input is also based on class
-            with torch.no_grad():
-                image_features = model.encode_image(image)
-                text_features = model.encode_text(text)
+        with torch.no_grad():
+            outputs = evaluator.parallel_forward(image, labels) #evaluator.forward(image, labels) #parallel_forward
+            #outputs = model(image,labels)
+            predicts = [
+                torch.max(output, 1)[1].cpu().numpy() 
+                for output in outputs
+            ]
+        #Lseg results    
+        predict = predicts[0]
 
-                logits_per_image, logits_per_text = model(image, text)
-                probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+        new_palette = get_new_pallete(len(labels))
+        mask, patches = get_new_mask_pallete(predict, new_palette, out_label_flag=True, labels=labels)
+        img = image[0].permute(1,2,0)
+        img = img * 0.5 + 0.5
+        img = Image.fromarray(np.uint8(255*img)).convert("RGBA")
+        seg = mask.convert("RGBA")
+        out = Image.blend(img, seg, alpha)
+        #plt.axis('off')
+        #plt.imshow(img)
+        #plt.figure()
+        #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
+        #plt.axis('off')
+        #plt.imshow(seg)
+        
+        #get bbox
+        rgba_cols = palette_to_rgba(new_palette)
+        bboxes, segmaps = process_segmap(rgba_cols,seg)
+        
+        #Show results of bounding boxes
+        from PIL import Image, ImageDraw
+        img_copy = img.copy()
+        #for i in range(0,len(bboxes)-1):
+        #    topLeft = (bboxes[i][0],bboxes[i][1])
+        #    bottomRight = (bboxes[i][2],bboxes[i][3])
+        #    img1 = ImageDraw.Draw(img_copy)
+        #    rect_color = getHexColor(rgba_cols[i])
+        #    draw_rectangle(img1, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=5)
+        #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
+        #plt.axis('off')
+        #plt.imshow(img_copy)
+        
+        w,h = img.size
+        min_size = w*h*0.005 #arbitary min size, 0.005 for the cat human image
+        new_bbox = bbox_instancing(bboxes,segmaps,min_size=min_size) 
+        
+        #sample bbox instancing result
+        img_copy_test = img.copy()
+        for i in range(len(new_bbox)-1):
+            for j in range(len(new_bbox[i])):
+                topLeft = (new_bbox[i][j][0],new_bbox[i][j][1])
+                bottomRight = (new_bbox[i][j][2],new_bbox[i][j][3])
+                img1 = ImageDraw.Draw(img_copy_test)
+                #rect_color = getHexColor(rgba_cols[i])
+                draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=5)
+                #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
+        #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
+        plt.axis('off')
+        plt.imshow(img_copy_test)
+        img_copy_clip = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
+        img_copy_clip = np.array(img_copy_clip)
+        cropped_imgs = []
+        for class_bbox in new_bbox:
+            cropped_imgs.append([])
+            for bbox in class_bbox:
+                cropped_imgs[len(cropped_imgs)-1].append(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]])
 
-            #print("Box "+str(j)+": "+str(probs[0][0]))
-            #if score is higher than max, max = score and append to list. if score within 0.1 of max score, append as well
-            if probs[0][0]>max_score:
-                max_score = probs[0][0]
-                best_id = j
-        if best_id not in vote_arr:
-            vote_arr.append(best_id)
-        else:
-            break
+
+
+        for cls in cropped_imgs:
+            for i in range(len(cls)):
+                #img_transform = transform(cls[i]).unsqueeze(0)
+                #print(cls[i])
+                cls[i]=Image.fromarray(cls[i])
             
-    
-    #print(vote_arr)
-    #best_bbox = best_id
         
-    #plt.imshow(cropped_imgs[0][best_bbox])    
-    #print(new_bbox[0][best_bbox])
-                #probs[0][0]
-    #print('pass to clip:')
-    #for sentence in ref['sentences']:
-    #    print (sentence['sent'])
-    #run clip with 3 prompts, use voting to determine which to return. only return 1 bbox for each prompts
-    
-    #draw results from clip
-    from PIL import Image, ImageDraw
-    img_copy_test = img.copy()
+        vote_arr = [0]*len(new_bbox[0])
 
-    idx = best_id
-    #print((processed_new_bbox[i][j]))
-    topLeft = (prop_rects[idx][0],prop_rects[idx][1])
-    bottomRight = (prop_rects[idx][2],prop_rects[idx][3])
-    new_bbox_xywh = [topLeft[0], topLeft[1], bottomRight[0]-topLeft[0], bottomRight[1]-topLeft[1]]
-    IoU = computeIoU(ref_bbox, new_bbox_xywh)
-    img2 = ImageDraw.Draw(img_copy_test)
-    #rect_color = getHexColor(rgba_cols[i])
-    draw_rectangle(img2, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=4)
-    #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
-    plt.axis('off')
-    plt.imshow(img_copy_test)
-    plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
-    #**TODO** IOU, remember to check for size difference
-    plt.figure()
-    refer.showRef(ref, seg_box='box')
-    plt.show()
+        for sentence in ref['sentences']:          
+            max_score = 0
+            best_id = -1
+            ret_index_temp = []
+            ret_index_cls = []
+            #print("number of cropped: "+ str(len(cropped_imgs[0])))
+            for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
+                #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
+                image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
+                #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
+                text = clip.tokenize([sentence['sent'], "other"]).to(device)  #extracted input is also based on class
+                with torch.no_grad():
+                    image_features = model.encode_image(image)
+                    text_features = model.encode_text(text)
+
+                    logits_per_image, logits_per_text = model(image, text)
+                    probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+
+                #print("Box "+str(j)+": "+str(probs[0][0]))
+                #if score is higher than max, max = score and append to list. if score within 0.1 of max score, append as well
+                if probs[0][0]>max_score:
+                    max_score = probs[0][0]
+                    best_id = j
+            vote_arr[best_id]+=1
+        
+        #print(vote_arr)
+        best_bbox = vote_arr.index(max(vote_arr)) #narrow down 1 box in the instance first, then use region proposal within that box
+        
+        
+        
+        #####REGION PROPOSAL########
+        prop_rects = ssearch(img_path+refer.loadImgs(image_id)[0]['file_name'], new_bbox[0][best_bbox], min_size) #uninstanced bboxes, use the best box and perform region proposal
+        img_copy_test = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
+        #print(prop_rects)
+        count = 0
+
+        best_bbox = -1
+        #if len(new_bbox[0])==1:
+            #return that one box
+        #    best_bbox = 0
+        #else:
+        #crop_size = 480
+        padding = [0.0] * 3
+        img_copy_clip = Image.open(img_path+refer.loadImgs(image_id)[0]['file_name'])
+        #print(type(img_copy_clip))
+        img_copy_clip = np.array(img_copy_clip)
+
+        cropped_imgs = [[]]
+        #for class_bbox in new_bbox:
+        #    cropped_imgs.append([])
+            #for bbox in class_bbox:
+            #    cropped_imgs[len(cropped_imgs)-1].append(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]])
+
+        for bbox in prop_rects:
+            #print(bbox)
+            cropped_imgs[0].append(Image.fromarray(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]]))
+            
+        
+        vote_arr = []
+        
+        best_id = -1
+        
+        
+        ####CLIP#######
+        for sentence in ref['sentences']:          
+            max_score = 0
+            ret_index_temp = []
+            ret_index_cls = []
+            #print("number of cropped: "+ str(len(cropped_imgs[0])))
+            for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
+                print(j)
+                #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
+                image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
+                #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
+                text = clip.tokenize([sentence['sent'], "other"]).to(device)  #extracted input is also based on class
+                with torch.no_grad():
+                    image_features = model.encode_image(image)
+                    text_features = model.encode_text(text)
+
+                    logits_per_image, logits_per_text = model(image, text)
+                    probs = logits_per_image.softmax(dim=-1).cpu().numpy()
+
+                #print("Box "+str(j)+": "+str(probs[0][0]))
+                #if score is higher than max, max = score and append to list. if score within 0.1 of max score, append as well
+                if probs[0][0]>max_score:
+                    max_score = probs[0][0]
+                    best_id = j
+            if best_id not in vote_arr:
+                vote_arr.append(best_id)
+            #else:
+            #    break
+                
+        
+        topLeft_new = [99999999,9999999]
+        botRight_new = [-1,-1]
+        #merge vote arr bboxes
+        for box_id in vote_arr:
+            #print(prop_rects[box_id])
+            if prop_rects[box_id][0]<topLeft_new[0]:
+                topLeft_new[0] = prop_rects[box_id][0]
+            if prop_rects[box_id][1]<topLeft_new[1]:
+                topLeft_new[1] = prop_rects[box_id][1]
+            if prop_rects[box_id][2]>botRight_new[0]:
+                botRight_new[0] = prop_rects[box_id][2]
+            if prop_rects[box_id][3]>botRight_new[1]:
+                botRight_new[1] = prop_rects[box_id][3]
+        final_bbox = [topLeft_new[0], topLeft_new[1], botRight_new[0],botRight_new[1]]
+        final_bbox
+        #draw results from clip
+        from PIL import Image, ImageDraw
+        img_copy_test = img.copy()
+
+        #idx = best_id
+        #print((processed_new_bbox[i][j]))
+        #topLeft = (prop_rects[idx][0],prop_rects[idx][1])
+        #bottomRight = (prop_rects[idx][2],prop_rects[idx][3])
+        #new_bbox_xywh = [topLeft[0], topLeft[1], bottomRight[0]-topLeft[0], bottomRight[1]-topLeft[1]]
+        new_bbox_xywh = [topLeft_new[0], topLeft_new[1], botRight_new[0]-topLeft_new[0], botRight_new[1]-topLeft_new[1]]
+        ref_bbox = refer.refToAnn[ref_id]['bbox']
+        IoU = computeIoU(ref_bbox, new_bbox_xywh)
+        print("IoU: ", str(IoU))
+        #img2 = ImageDraw.Draw(img_copy_test)
+        #rect_color = getHexColor(rgba_cols[i])
+        #draw_rectangle(img2, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=4)
+        #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
+        #plt.axis('off')
+        #plt.imshow(img_copy_test)
+        #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
+        #**TODO** IOU, remember to check for size difference
+        #plt.figure()
+        #refer.showRef(ref, seg_box='box')
+        #plt.show()
 
 
-    # open the file in the write mode
-    #with open('iou_log_ssearch.csv',  mode='a', newline='') as f:
-        # create the csv writer
-    #    writer = csv.writer(f)
+        # open the file in the write mode
+        with open('iou_log_ssearch.csv',  mode='a', newline='') as f:
+            # create the csv writer
+            writer = csv.writer(f)
 
-        # write a row to the csv file
-    #    writer.writerow([counter-2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
-    #    counter+=1
-    #except:
-        #counter+=1
-        #continue
+            # write a row to the csv file
+            writer.writerow([counter,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
+            counter+=1
+    except:
+        counter+=1
+        continue
