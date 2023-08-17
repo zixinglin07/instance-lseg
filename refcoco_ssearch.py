@@ -776,11 +776,11 @@ for ref_id in ref_ids:
                 if probs[0][0]>max_score:
                     max_score = probs[0][0]
                     best_id = j
-            vote_arr[best_id]+=1
+            vote_arr[best_id]+=max_score #weighted voting
         
         #print(vote_arr)
         best_bbox = vote_arr.index(max(vote_arr)) #narrow down 1 box in the instance first, then use region proposal within that box
-        
+        print(vote_arr)
         
         
         #####REGION PROPOSAL########
@@ -844,8 +844,8 @@ for ref_id in ref_ids:
                 vote_arr.append(best_id)
             #else:
             #    break
-                
-        
+        #vote_arr = [220,15]
+        print(vote_arr)
         topLeft_new = [99999999,9999999]
         botRight_new = [-1,-1]
         #merge vote arr bboxes
@@ -860,7 +860,7 @@ for ref_id in ref_ids:
             if prop_rects[box_id][3]>botRight_new[1]:
                 botRight_new[1] = prop_rects[box_id][3]
         final_bbox = [topLeft_new[0], topLeft_new[1], botRight_new[0],botRight_new[1]]
-        final_bbox
+        #final_bbox
         #draw results from clip
         from PIL import Image, ImageDraw
         img_copy_test = img.copy()
@@ -877,7 +877,7 @@ for ref_id in ref_ids:
         #img2 = ImageDraw.Draw(img_copy_test)
         #rect_color = getHexColor(rgba_cols[i])
         #draw_rectangle(img2, (topLeft,bottomRight),color = tuple(rgba_cols[i]), width=4)
-        #draw_rectangle(img1, (topLeft,bottomRight),color = "red", width=2)
+        #draw_rectangle(img2, (topLeft_new,botRight_new),color = "red", width=2)
         #plt.axis('off')
         #plt.imshow(img_copy_test)
         #plt.legend(handles=patches, loc='upper right', bbox_to_anchor=(1.5, 1), prop={'size': 20})
@@ -888,7 +888,7 @@ for ref_id in ref_ids:
 
 
         # open the file in the write mode
-        with open('iou_log_ssearch.csv',  mode='a', newline='') as f:
+        with open('iou_log_ssearch_wvote.csv',  mode='a', newline='') as f:
             # create the csv writer
             writer = csv.writer(f)
 
