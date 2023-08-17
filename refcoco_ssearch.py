@@ -823,7 +823,8 @@ for ref_id in ref_ids:
             ret_index_cls = []
             #print("number of cropped: "+ str(len(cropped_imgs[0])))
             for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
-                print(j)
+                if(j%10==0) #only print every 10
+                    print(j)
                 #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
                 image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
                 #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
