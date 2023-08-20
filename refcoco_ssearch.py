@@ -634,11 +634,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 counter = 0
-checkpoint = 0 # enter last index in iou log
+checkpoint = 932 # enter last index in iou log
 for ref_id in ref_ids:
-    #if counter<=(checkpoint): #somehow need to add +2 to checkpoint to resume
-    #    counter+=1
-    #    continue
+    if counter<=(checkpoint): #somehow need to add +2 to checkpoint to resume
+        counter+=1
+        continue
     ref = refer.loadRefs(ref_id)[0]
     image_id = refer.getImgIds(ref_id)[0]
     if len(ref['sentences']) < 2:
@@ -758,6 +758,7 @@ for ref_id in ref_ids:
             best_id = -1
             ret_index_temp = []
             ret_index_cls = []
+            same_scores = 1
             #print("number of cropped: "+ str(len(cropped_imgs[0])))
             for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
                 #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
@@ -776,7 +777,10 @@ for ref_id in ref_ids:
                 if probs[0][0]>max_score:
                     max_score = probs[0][0]
                     best_id = j
-            vote_arr[best_id]+=max_score #weighted voting
+                elif probs[0][0] == max_score:
+                    same_scores +=1
+            if same_scores<len(cropped_imgs[0]):   
+                vote_arr[best_id]+=max_score #weighted voting
         
         #print(vote_arr)
         best_bbox = vote_arr.index(max(vote_arr)) #narrow down 1 box in the instance first, then use region proposal within that box
@@ -823,7 +827,7 @@ for ref_id in ref_ids:
             ret_index_cls = []
             #print("number of cropped: "+ str(len(cropped_imgs[0])))
             for j in range(len(cropped_imgs[0])): #for each cropped_image run it through clip with the label of description and get the highest scoring boxes
-                if(j%10==0) #only print every 10
+                if j%10==0: #only print every 10
                     print(j)
                 #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
                 image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
