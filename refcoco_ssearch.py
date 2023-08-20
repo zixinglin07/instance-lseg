@@ -634,7 +634,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 counter = 0
-checkpoint = 932 # enter last index in iou log
+checkpoint = 950 # enter last index in iou log
 for ref_id in ref_ids:
     if counter<=(checkpoint): #somehow need to add +2 to checkpoint to resume
         counter+=1
