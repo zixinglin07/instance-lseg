@@ -634,9 +634,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 counter = 0
-checkpoint = 1156 # enter last index in iou log
+checkpoint = 2400 # enter last index in iou log
 for ref_id in ref_ids:
-    if counter<=(checkpoint+3): #somehow need to add +2 to checkpoint to resume
+    if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
         counter+=1
         continue
     ref = refer.loadRefs(ref_id)[0]
@@ -898,7 +898,7 @@ for ref_id in ref_ids:
             writer = csv.writer(f)
 
             # write a row to the csv file
-            writer.writerow([counter,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
+            writer.writerow([counter-2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
             counter+=1
     except:
         counter+=1
