@@ -667,7 +667,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 2821 # enter last index in iou log
+    checkpoint = 3037 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
