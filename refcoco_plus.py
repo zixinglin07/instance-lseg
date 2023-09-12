@@ -575,7 +575,7 @@ class Options:
 if __name__ == '__main__':
     print("START SCRIPT")
     data_root = refer_path + '/data'  # contains refclef, refcoco, refcoco+, refcocog and images
-    dataset = 'refcoco'
+    dataset = 'refcoco+'
     splitBy = 'unc'
     refer = REFER(data_root, dataset, splitBy)
 
@@ -667,7 +667,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 63 # enter last index in iou log
+    checkpoint = 3580 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
@@ -904,7 +904,7 @@ if __name__ == '__main__':
 
 
             # open the file in the write mode
-            with open('iou_log_refcoco.csv',  mode='a', newline='') as f:
+            with open('iou_log_refcoco+.csv',  mode='a', newline='') as f:
                 # create the csv writer
                 writer = csv.writer(f)
 
