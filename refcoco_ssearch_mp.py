@@ -9,7 +9,7 @@ from matplotlib.patches import Rectangle
 from pprint import pprint
 import csv
 import cv2
-import multiprocessing
+import multiprocessing as mp
 
 # IoU function
 def computeIoU(box1, box2):
@@ -326,7 +326,7 @@ def bbox_instancing(bboxes,segmaps,min_size = 5):
         final_instances.append(instanced_boxes)
     return final_instances
 
-def clip_score(sentence):
+def clip_score(cropped_imgs):
     max_score = 0
     ret_index_temp = []
     ret_index_cls = []
@@ -352,6 +352,7 @@ def clip_score(sentence):
             max_score = probs[0][0]
             best_id = j
     return best_id
+    
     
     
     
@@ -578,7 +579,7 @@ if __name__ == '__main__':
     dataset = 'refcoco'
     splitBy = 'unc'
     refer = REFER(data_root, dataset, splitBy)
-
+    global_sent = ""
 
     ref_ids = refer.getRefIds()
     print(len(ref_ids))
@@ -667,7 +668,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 813 # enter last index in iou log
+    checkpoint = 572 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
@@ -855,7 +856,11 @@ if __name__ == '__main__':
             
             ####CLIP#######
             for sentence in ref['sentences']:
-                best_id = clip_score(sentence)
+                global_sent = sentence
+                no_threads = mp.cpu_count()
+                p = mp.Pool(processes = no_threads)
+                best_id = p.map(clip_score, cropped_imgs)
+                #best_id = clip_score(sentence)
                 if best_id not in vote_arr:
                     vote_arr.append(best_id)
                 #else:
@@ -904,7 +909,7 @@ if __name__ == '__main__':
 
 
             # open the file in the write mode
-            with open('iou_log_refcoco.csv',  mode='a', newline='') as f:
+            with open('iou_log_refcoco_test.csv',  mode='a', newline='') as f:
                 # create the csv writer
                 writer = csv.writer(f)
 
