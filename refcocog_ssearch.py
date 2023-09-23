@@ -9,7 +9,7 @@ from matplotlib.patches import Rectangle
 from pprint import pprint
 import csv
 import cv2
-import multiprocessing as mp
+import multiprocessing
 
 # IoU function
 def computeIoU(box1, box2):
@@ -326,7 +326,7 @@ def bbox_instancing(bboxes,segmaps,min_size = 5):
         final_instances.append(instanced_boxes)
     return final_instances
 
-def clip_score(cropped_imgs):
+def clip_score(sentence):
     max_score = 0
     ret_index_temp = []
     ret_index_cls = []
@@ -336,8 +336,7 @@ def clip_score(cropped_imgs):
         if j%10==0: #only print every 10
             print(j)
         #image = preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
-        bbox = cropped_imgs[0][j]
-        image = preprocess(Image.fromarray(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]])).unsqueeze(0).to(device)
+        image = preprocess(cropped_imgs[0][j]).unsqueeze(0).to(device)
         #text = clip.tokenize(["person in blue", "person in white", "person in red"]).to(device)
         text = clip.tokenize([sentence['sent'], "other"]).to(device)  #extracted input is also based on class
         with torch.no_grad():
@@ -353,7 +352,6 @@ def clip_score(cropped_imgs):
             max_score = probs[0][0]
             best_id = j
     return best_id
-    
     
     
     
@@ -576,12 +574,11 @@ class Options:
     
 if __name__ == '__main__':
     print("START SCRIPT")
-
     data_root = refer_path + '/data'  # contains refclef, refcoco, refcoco+, refcocog and images
-    dataset = 'refcoco'
-    splitBy = 'unc'
+    dataset = 'refcocog'
+    splitBy = 'google'
     refer = REFER(data_root, dataset, splitBy)
-    global_sent = ""
+
 
     ref_ids = refer.getRefIds()
     print(len(ref_ids))
@@ -670,7 +667,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 572 # enter last index in iou log
+    checkpoint = 1054 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
@@ -821,7 +818,7 @@ if __name__ == '__main__':
             #print(vote_arr)
             best_bbox = vote_arr.index(max(vote_arr)) #narrow down 1 box in the instance first, then use region proposal within that box
             print(vote_arr)
-            del(cropped_imgs)
+            
             
             #####REGION PROPOSAL########
             prop_rects = ssearch(img_path+refer.loadImgs(image_id)[0]['file_name'], new_bbox[0][best_bbox], min_size) #uninstanced bboxes, use the best box and perform region proposal
@@ -840,7 +837,7 @@ if __name__ == '__main__':
             #print(type(img_copy_clip))
             img_copy_clip = np.array(img_copy_clip)
 
-            cropped_imgs_bbox = [[]]
+            cropped_imgs = [[]]
             #for class_bbox in new_bbox:
             #    cropped_imgs.append([])
                 #for bbox in class_bbox:
@@ -848,20 +845,17 @@ if __name__ == '__main__':
 
             for bbox in prop_rects:
                 #print(bbox)
-                #cropped_imgs_bbox[0].append(Image.fromarray(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]]))
-                cropped_imgs_bbox[0].append(bbox)
+                cropped_imgs[0].append(Image.fromarray(img_copy_clip[bbox[1]:bbox[3],bbox[0]:bbox[2]]))
+                
             
             vote_arr = []
             
             best_id = -1
             
-            no_threads = 2
-            p = mp.Pool(processes = no_threads)
+            
             ####CLIP#######
             for sentence in ref['sentences']:
-                global_sent = sentence
-                best_id = p.map(clip_score, cropped_imgs_bbox)
-                #best_id = clip_score(sentence)
+                best_id = clip_score(sentence)
                 if best_id not in vote_arr:
                     vote_arr.append(best_id)
                 #else:
@@ -910,12 +904,12 @@ if __name__ == '__main__':
 
 
             # open the file in the write mode
-            with open('test.csv',  mode='a', newline='') as f:
+            with open('iou_log_refcocog.csv',  mode='a', newline='') as f:
                 # create the csv writer
                 writer = csv.writer(f)
 
                 # write a row to the csv file
-                writer.writerow([counter-2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
+                writer.writerow([counter+2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
                 counter+=1
         except:
             counter+=1
