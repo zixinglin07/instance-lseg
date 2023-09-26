@@ -575,8 +575,8 @@ class Options:
 if __name__ == '__main__':
     print("START SCRIPT")
     data_root = refer_path + '/data'  # contains refclef, refcoco, refcoco+, refcocog and images
-    dataset = 'refcocog'
-    splitBy = 'google'
+    dataset = 'refcoco+'
+    splitBy = 'unc'
     refer = REFER(data_root, dataset, splitBy)
 
 
@@ -585,7 +585,7 @@ if __name__ == '__main__':
     print (len(refer.Imgs))
     print (len(refer.imgToRefs))
 
-    ref_ids = refer.getRefIds(split='train')
+    ref_ids = refer.getRefIds(split='testA')
     print ('There are %s training referred objects.' % len(ref_ids))
 
     args = Options().parse()
@@ -667,7 +667,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 1153 # enter last index in iou log
+    checkpoint = 22 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
@@ -904,12 +904,12 @@ if __name__ == '__main__':
 
 
             # open the file in the write mode
-            with open('iou_log_refcocog.csv',  mode='a', newline='') as f:
+            with open('final_eval/refcoco+.csv',  mode='a', newline='') as f:
                 # create the csv writer
                 writer = csv.writer(f)
 
                 # write a row to the csv file
-                writer.writerow([counter+2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
+                writer.writerow([counter-2,refer.loadImgs(image_id)[0]['file_name'],refer.Cats[ref['category_id']],IoU])
                 counter+=1
         except:
             counter+=1
