@@ -575,8 +575,8 @@ class Options:
 if __name__ == '__main__':
     print("START SCRIPT")
     data_root = refer_path + '/data'  # contains refclef, refcoco, refcoco+, refcocog and images
-    dataset = 'refcoco+'
-    splitBy = 'unc'
+    dataset = 'refcocog'
+    splitBy = 'google'
     refer = REFER(data_root, dataset, splitBy)
 
 
@@ -585,7 +585,7 @@ if __name__ == '__main__':
     print (len(refer.Imgs))
     print (len(refer.imgToRefs))
 
-    ref_ids = refer.getRefIds(split='testA')
+    ref_ids = refer.getRefIds(split='val')
     print ('There are %s training referred objects.' % len(ref_ids))
 
     args = Options().parse()
@@ -667,7 +667,7 @@ if __name__ == '__main__':
 
 
     counter = 0
-    checkpoint = 1190 # enter last index in iou log
+    checkpoint = 807 # enter last index in iou log
     for ref_id in ref_ids:
         if counter<=(checkpoint+2): #somehow need to add +2 to checkpoint to resume
             counter+=1
@@ -904,7 +904,7 @@ if __name__ == '__main__':
 
 
             # open the file in the write mode
-            with open('final_eval/refcoco+.csv',  mode='a', newline='') as f:
+            with open('final_eval/refcocog.csv',  mode='a', newline='') as f:
                 # create the csv writer
                 writer = csv.writer(f)
 
