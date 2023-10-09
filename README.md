@@ -1,6 +1,8 @@
+# Instance Lseg
+This repository is the source code for my final year project titled: Instance LSeg: Exploring Instance Information from Visual Language Model.
 
 ### Installation
-
+Python Version = 3.7.16
 ```
 conda install ipython
 pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
@@ -29,9 +31,8 @@ python prepare_ade20k.py
 Note: for demo, if you want to use random inputs, you can ignore data loading and comment the code at [link](https://github.com/isl-org/lang-seg/blob/main/modules/lseg_module.py#L55). 
 
 
-### 🌻 Try demo now
 
-#### Download Demo Model
+#### Download Demo LSeg Model
 <table>
   <thead>
     <tr style="text-align: right;">
@@ -53,10 +54,10 @@ Note: for demo, if you want to use random inputs, you can ignore data loading an
 
 
 
-#### 👉Jupyter Notebook
+#### Jupyter Notebook
 Download the model for demo and put it under folder `checkpoints` as `checkpoints/demo_e200.ckpt`. 
 
-Then run `lseg_demo_nltk.ipynb` in your Jupyter Notebook
+Then run `instance_lseg_demo.ipynb` in your Jupyter Notebook
 
 
 
