@@ -1,0 +1,4 @@
+a black cellphone in a little girls hand
+cell phone
+COCO_train2014_000000253065_322690.jpg
+refcocog_train_1094

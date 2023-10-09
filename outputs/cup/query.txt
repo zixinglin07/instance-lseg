@@ -1,0 +1,4 @@
+A dimly lit to-go cup with a picture of a classic coca-cola on it
+cup
+COCO_train2014_000000127882_677518.jpg
+refcocog_train_42

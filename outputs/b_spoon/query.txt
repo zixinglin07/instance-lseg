@@ -1,0 +1,3 @@
+The big spoon by the soup
+spoon
+refcocog_train_106

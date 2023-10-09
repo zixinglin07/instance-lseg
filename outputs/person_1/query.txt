@@ -1,0 +1,4 @@
+A man in a black jacket
+person
+COCO_train2014_000000274266_443573.jpg
+refcocog_train_19

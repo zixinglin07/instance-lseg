@@ -1,0 +1,4 @@
+TV
+A TV with a woman being interviewed on it
+COCO_train2014_000000181828_33583.jpg
+refcocog_train 1

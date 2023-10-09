@@ -1,0 +1,4 @@
+white surfboard with blue stripes held by woman
+surfboard
+COCO_train2014_000000161814_649124.jpg
+refcocog_train_142
