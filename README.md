@@ -1,6 +1,8 @@
 # Instance Lseg
 This repository is the source code for my final year project titled: Instance LSeg: Exploring Instance Information from Visual Language Model.
 
+In this project, we introduce a pre-visual grounding task using LSeg to generate a set of preliminary regions for visual grounding. This utilizes the zero-shot semantic segmentation capabilities to reduce the region of interest for performing visual grounding, enhancing efficiency and accuracy of the operation. The published paper can be found in NTU repository as shown [here](https://dr.ntu.edu.sg/handle/10356/171917).
+
 ### Installation
 Python Version = 3.7.16
 ```
